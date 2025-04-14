@@ -461,6 +461,16 @@ class Qwen2ForCausalLM(nn.Module, SupportsLoRA, SupportsPP):
     ) -> Union[torch.Tensor, IntermediateTensors]:
         hidden_states = self.model(input_ids, positions, intermediate_tensors,
                                    inputs_embeds)
+        import traceback
+        traceback.print_stack()
+        # print shape of all tensors
+        print(f"input_ids: {input_ids.shape}")
+        print(f"positions: {positions.shape}")
+        print(f"intermediate_tensors: {intermediate_tensors}")
+        print(f"inputs_embeds: {inputs_embeds.shape if inputs_embeds is not None else None}")
+        print(f"hidden_states: {hidden_states.shape}")
+        print('=' * 20)
+        # decoded_text = self.model.get_input_embeddings().decode(input_ids[0])
         return hidden_states
 
     def compute_logits(

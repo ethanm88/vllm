@@ -352,7 +352,12 @@ def resolve_hf_chat_template(
 
     # 3rd priority: AutoTokenizer chat template
     try:
-        return tokenizer.get_chat_template(chat_template, tools=tools)
+        chat_template = tokenizer.get_chat_template(chat_template, tools=tools)
+        # For reasoning remove condition on end </think> in the template
+        chat_template = chat_template.replace(
+            "{% if '</think>' in content %}{% set content = content.split('</think>')[-1] %}{% endif %}", ""
+        )
+        return chat_template
     except Exception:
         logger.debug("Failed to load AutoTokenizer chat template for %s",
                      tokenizer.name_or_path, exc_info=True)
