@@ -3349,6 +3349,50 @@ class CompilationConfig(BaseModel):
                 "vllm.unified_attention_with_output",
             ]
 
+@dataclass
+class MessagePassingConfig:
+    """Controls the message passing behavior between threads."""
+
+    do_message_passing: bool = False
+    """
+    Whether or not to perform message passing during generation
+    """
+    
+    num_message_passing_tokens: int = 16
+    """
+    The number of tokens to generate with message passing
+    """
+    
+    num_non_message_passing_tokens: int = 64
+    """
+    The number of tokens to generate without message passing    
+    """
+    
+    num_group_chains: int = 4
+    """
+    The number of chains to use for message passing. If this
+    parameter is k, and there will be n / k separate closed
+    groups where messages will occur
+    """
+
+    def compute_hash(self) -> str:
+        """
+        WARNING: Whenever a new field is added to this config,
+        ensure that it is included in the factors list if
+        it affects the computation graph.
+
+        Provide a hash that uniquely identifies all the configs
+        that affect the structure of the computation
+        graph from input ids/embeddings to the final hidden states,
+        excluding anything before input ids/embeddings and after
+        the final hidden states.
+        """
+        # no factors to consider.
+        # this config will not affect the computation graph.
+        factors: list[Any] = []
+        hash_str = hashlib.md5(str(factors).encode(),
+                               usedforsecurity=False).hexdigest()
+        return hash_str
 
 @dataclass
 class VllmConfig:
@@ -3376,6 +3420,8 @@ class VllmConfig:
                                                   init=True)  # type: ignore
     kv_transfer_config: KVTransferConfig = field(default=None,
                                                  init=True)  # type: ignore
+    message_passing_config: MessagePassingConfig=field(default=None, 
+                                                       init=True)
     # some opaque config, only used to provide additional information
     # for the hash computation, mainly used for testing, debugging or out of
     # tree config registration.
@@ -3459,6 +3505,10 @@ class VllmConfig:
             vllm_factors.append("None")
         if self.kv_transfer_config:
             vllm_factors.append(self.kv_transfer_config.compute_hash())
+        else:
+            vllm_factors.append("None")
+        if self.message_passing_config:
+            vllm_factors.append(self.message_passing_config.compute_hash())
         else:
             vllm_factors.append("None")
         if self.additional_config:
@@ -3718,7 +3768,8 @@ class VllmConfig:
             f"disable_mm_preprocessor_cache={self.model_config.disable_mm_preprocessor_cache!r}, "  # noqa
             f"mm_processor_kwargs={self.model_config.mm_processor_kwargs}, "
             f"pooler_config={self.model_config.pooler_config!r}, "
-            f"compilation_config={self.compilation_config!r}")
+            f"compilation_config={self.compilation_config!r}, "
+            f"message_passing_config={self.message_passing_config!r}")
 
 
 _current_vllm_config: Optional[VllmConfig] = None

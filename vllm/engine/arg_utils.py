@@ -18,7 +18,8 @@ from vllm.config import (CacheConfig, CompilationConfig, ConfigFormat,
                          ModelConfig, ModelImpl, ObservabilityConfig,
                          ParallelConfig, PoolerConfig, PromptAdapterConfig,
                          SchedulerConfig, SpeculativeConfig, TaskOption,
-                         TokenizerPoolConfig, VllmConfig)
+                         TokenizerPoolConfig, MessagePassingConfig,
+                         VllmConfig)
 from vllm.executor.executor_base import ExecutorBase
 from vllm.logger import init_logger
 from vllm.model_executor.layers.quantization import QUANTIZATION_METHODS
@@ -210,7 +211,13 @@ class EngineArgs:
     enable_reasoning: Optional[bool] = None
     reasoning_parser: Optional[str] = None
     use_tqdm_on_load: bool = True
-
+    
+    # args for message passing
+    do_message_passing: bool = False
+    num_message_passing_tokens: int = 16
+    num_non_message_passing_tokens: int = 64
+    num_group_chains: int = 4
+    
     def __post_init__(self):
         if not self.tokenizer:
             self.tokenizer = self.model
@@ -1309,6 +1316,13 @@ class EngineArgs:
             collect_model_execute_time="worker" in detailed_trace_modules
             or "all" in detailed_trace_modules,
         )
+        
+        message_passing_config = MessagePassingConfig(
+            self.do_message_passing,
+            self.num_message_passing_tokens,
+            self.num_non_message_passing_tokens,
+            self.num_group_chains
+        )
 
         config = VllmConfig(
             model_config=model_config,
@@ -1324,6 +1338,7 @@ class EngineArgs:
             prompt_adapter_config=prompt_adapter_config,
             compilation_config=self.compilation_config,
             kv_transfer_config=self.kv_transfer_config,
+            message_passing_config=message_passing_config,
             additional_config=self.additional_config,
         )
 
